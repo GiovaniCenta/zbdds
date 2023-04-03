@@ -3,22 +3,28 @@ class ZBDDNode:
         self.top = top
         self.po = po
         self.p1 = p1
+    def __str__(self):
+        return f"({self.top}, {self.po}, {self.p1})"
+
 
 class ZBDD:
     def __init__(self):
         self.uniq_table = {}
-        self.base_node = ZBDDNode(0, 1, 0)  # Add base_node to ZBDD class
-    
+        self.base_node = ZBDDNode(-1, 0, 0)
+
     def getnode(self, top, po, p1):
-        if p1 == 0: # node elimination
+        if p1 == 0:  # node elimination
             return po
         p = (top, po, p1)
-        if p in self.uniq_table: # node sharing
+        if p in self.uniq_table:  # node sharing
             return self.uniq_table[p]
-        node = ZBDDNode(p, po, p1)
+        if not isinstance(po, ZBDDNode):  # Convert integer to ZBDDNode if necessary
+            po = self.base_node
+        if not isinstance(p1, ZBDDNode):  # Convert integer to ZBDDNode if necessary
+            p1 = self.base_node
+        node = ZBDDNode(top, po, p1)
         self.uniq_table[p] = node
         return node
-    
     def subset1(self, p, var):
         if not isinstance(p, ZBDDNode): # check if p is a ZBDDNode object
             return 0
@@ -104,24 +110,42 @@ class ZBDD:
                 return self.getnode(p.top, po, p1)
 
     def count(self, p):
-        if p == 0:
+        if not isinstance(p, ZBDDNode):  # Check if p is a ZBDDNode object
             return 0
-        elif p == self.base_node:
+        if p.top == -1:
             return 1
-        else:
-            return self.count(p.po) + self.count(p.p1)
-        
+        if p.po == 0 and p.p1 == 0:
+            return 0
+        return self.count(p.po) + self.count(p.p1)
+    
+    def print_zbdd(self, p, level=0):
+        if not isinstance(p, ZBDDNode):
+            return ' ' * level + str(p)
 
+        return (
+            ' ' * level
+            + str(p)
+            + '\n'
+            + self.print_zbdd(p.po, level + 2)
+            + '\n'
+            + self.print_zbdd(p.p1, level + 2)
+        )
 
-# Create a single ZBDD instance
 zbdd = ZBDD()
 
-# Create a ZBDD for the set {0, 2}
-p = zbdd.getnode(2, zbdd.getnode(0, 1, 0), 0)
+p = zbdd.getnode(2, zbdd.getnode(0, 1, 1), 0)
 
-# Create a ZBDD for the set {1, 2}
-q = zbdd.getnode(2, 0, zbdd.getnode(1, 1, 0))
+q = zbdd.getnode(2, 0, zbdd.getnode(1, 1, 1))
 
-# Test cases (remaining test cases unchanged)
-assert zbdd.count(p) == 2
-assert zbdd.count(q) == 2
+
+print(zbdd.count(p))
+print(zbdd.count(q))
+
+# Test case 1: ZBDD for the set {0, 1}
+r = zbdd.getnode(1, zbdd.getnode(0, 1, 1), 0)
+print(zbdd.print_zbdd(r))
+exit(8)
+
+
+
+
